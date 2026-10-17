@@ -1,106 +1,65 @@
-# PC-Based Oscilloscope
+<h1 align="center">PC-Based Oscilloscope</h1>
 
-This repository contains the source code and instructions for a dual-channel PC-based oscilloscope using an Arduino, an ADS1115 ADC, and Python. It visualizes real-time data on two channels (A0 and A1) through a GUI built with `Tkinter` and plots using `Matplotlib`. This Arduino-based circuit can measure both AC and DC voltages ranging from ±30V. The design is suitable for low to medium voltage measurements and can be used for a variety of applications, such as monitoring power supplies, sensing battery voltage, or interfacing with analog circuits.
+<p align="center">
+  A two-channel oscilloscope for slow signals: an op-amp front end and an ADS1115 ADC on an Arduino, with a Python app that draws both channels live and measures them. It reads AC and DC signals up to <b>±30 V</b>.
+</p>
 
-## Features
-- Dual-channel signal visualization.
-- Real-time data plotting using Python's Matplotlib.
-- Adjustable zoom scales for both X and Y axes.
-- Real-time calculations for amplitude, frequency, peak-to-peak, RMS, and more.
-- Toggle offset correction for each channel.
-- Simple and intuitive graphical interface using Tkinter.
+<p align="center">
+  <img src="images/final-prototype.jpg" width="55%" alt="The finished prototype on perfboard: Arduino Uno, ADS1115 ADC module, MCP6004 op-amp, buck converter modules and screw-terminal inputs"/>
+  <br><sub>The finished board: Arduino Uno, ADS1115 ADC, MCP6004 op-amp, buck converters for the supply and offset, and screw-terminal inputs.</sub>
+</p>
 
-## Components
-- **Arduino**: Reads analog signals and sends them to the PC via serial communication.
-- **ADS1115 ADC**: Provides precise analog-to-digital conversion.
-- **Python**: Processes and visualizes data.
+## Tested against a real oscilloscope
 
-## Requirements
+A function generator drives both a lab DSO and this board at the same time, so the laptop trace can be compared with the reference directly.
 
-### Hardware:
-- Arduino (Uno, Nano, or similar)
-- ADS1115 (ADC Module)
-- MCP6004 (Op-Amp)
-- Voltage divider and virtual ground setup (if needed)
-- Wires, breadboard, etc.
+| Sine | Square | Triangle |
+|---|---|---|
+| <img src="images/sine-wave.jpg" alt="Sine wave from a function generator shown on the lab oscilloscope and, at the same time, in the Python app on the laptop"/> | <img src="images/square-wave.jpg" alt="Square wave on the lab oscilloscope and in the Python app"/> | <img src="images/triangular-wave.jpg" alt="Triangle wave on the lab oscilloscope and in the Python app"/> |
 
-### Software:
-- Python 3.x
-- Arduino IDE
-- Required Python Libraries:
-  ```bash
-  pip install pyserial matplotlib numpy
-  ```
+## From breadboard to perfboard
 
-## Setup and Installation
+| First test on a breadboard | The Python app |
+|---|---|
+| <img src="images/initial-testing.jpg" alt="Early breadboard version wired to an Arduino Uno, ADS1115 and buck converters"/> | <img src="images/GUI.png" alt="The Python app with two channel plots, zoom sliders, offset-correction buttons and live amplitude, frequency, peak-to-peak, RMS, mean, high and low readouts"/> |
 
-### 1. **Arduino Setup**:
-   - Connect the ADS1115 to the Arduino using I2C.
-   - Connect your analog signal inputs to the ADS1115.
-   - Upload the Arduino code provided in the `arduino_code.ino` file.
+## How it works
 
-### 2. **Python Setup**:
-   - Clone this repository:
-     ```bash
-     git clone https://github.com/Js0nnn/PC-Based-Oscilloscope.git
-     ```
-   - Navigate to the directory:
-     ```bash
-     cd PC-Based-Oscilloscope
-     ```
-   - Install required Python libraries:
-     ```bash
-     pip install pyserial matplotlib numpy
-     ```
+<p align="center">
+  <img src="Block_diagram_v1.png" width="90%" alt="Block diagram: each input channel goes through a voltage divider into the op-amp stage (with feedback and a voltage reference), then the ADC, the Arduino Uno R3 and the PC; one power supply feeds the op-amp, ADC and Arduino"/>
+</p>
 
-### 3. **Running the Python Script**:
-   - Connect your Arduino to the PC via USB.
-   - Make sure to adjust the `serial` port in the Python code (`COM3` is the default; change it according to your system).
-   - Run the Python script:
-     ```bash
-     python oscilloscope.py
-     ```
+1. **Front end.** Each input goes through a **voltage divider**, then an **MCP6004** op-amp stage shifts it to sit around a mid-rail **voltage reference**, so a ±30 V signal fits the ADC's input range. ([pinout](MCP6004pins.png), [circuit diagram](Circuit_diagram_v1.pdf))
+2. **ADC.** An **ADS1115** 16-bit ADC samples both channels and talks to the Arduino over I2C.
+3. **Arduino.** The [sketch](arduino-code/arduino-code.ino) converts the readings back to input volts and streams them over USB serial at 115200 baud as `A0: <value> A1: <value>`.
+4. **Python app.** The [Tkinter + Matplotlib app](gui-code/main_script.py) plots both channels live and shows amplitude, frequency, peak-to-peak, RMS, mean, high and low for each, with zoom sliders and an offset-correction toggle per channel.
 
-## How It Works
+## Parts
 
-### **Arduino Code**:
-   The Arduino reads voltage data from the ADS1115 on two channels (A0 and A1), adjusts the values using a voltage divider factor, and sends the data over a serial connection to the Python script.
+- Arduino Uno or Nano
+- ADS1115 16-bit ADC module
+- MCP6004 quad op-amp
+- Buck converters for the offset reference (a 2.5 V reference IC is the better choice, see below)
+- Resistor dividers, perfboard, screw terminals
 
-### **Python GUI**:
-   The Python script reads serial data from the Arduino and displays the live waveform for both channels. The GUI allows for:
-   - Real-time visualization of both channels.
-   - Zoom adjustments for better signal clarity.
-   - Real-time calculations for amplitude, frequency, RMS, and peak-to-peak voltage.
-   - Offset correction toggles for each channel.
+## Run it
 
-## Usage
-
-### Main Features:
-- **Plots**: Two real-time signal plots (one for each channel).
-- **Zoom Controls**: X and Y axis zoom sliders.
-- **Parameter Labels**: Display of amplitude, frequency, peak-to-peak, RMS, and mean values for each channel.
-- **Offset Correction**: Enable/Disable offset correction for better signal viewing.
-
-### Adjusting Serial Port:
-Make sure to update the `serial` port in the Python code (`COM3` by default) to match the one your Arduino is connected to.
-
-### Serial Data Format:
-The Arduino sends data in the format:
-```
-A0: <value> A1: <value>
-```
-Where `<value>` is the adjusted voltage from each channel.
+1. Flash [`arduino-code/arduino-code.ino`](arduino-code/arduino-code.ino) (needs the [ADS1X15 library](https://github.com/RobTillaart/ADS1X15)).
+2. Install the Python packages:
+   ```bash
+   pip install pyserial matplotlib numpy
+   ```
+3. Set your serial port in `initialize_serial()` in [`gui-code/main_script.py`](gui-code/main_script.py) (`COM3` by default; `/dev/ttyACM0` or similar on Linux), then run:
+   ```bash
+   python gui-code/main_script.py
+   ```
 
 ## Limitations
-- This circuit can measure a AC signal with a frequency of only upto 100Hz. This is limitted by the external ADC (ADS1115) used and the Arduino UNO's max. sampling rate.
-- For now instead of an actual 2.5V voltage reference IC, another buck converter is used to vary the zero offset.
-- This circuit does not have any protection circiut in the input to limit overvoltage and surpass voltage spikes.
+
+- **Signals up to about 100 Hz.** The ADS1115 and the Arduino's serial link limit the sample rate.
+- **No input protection.** There is nothing yet to clamp overvoltage or spikes on the inputs.
+- **Offset reference.** A buck converter sets the zero offset for now, where a proper 2.5 V reference IC would be more stable.
 
 ## Acknowledgments
-- [Arduino](https://www.arduino.cc/)
-- [Matplotlib](https://matplotlib.org/)
-- [ADS1115 Library](https://github.com/RobTillaart/ADS1X15)
-  
----
 
-### Enjoy experimenting with this versatile voltage measurement circuit! It's a simple yet powerful design that opens up countless possibilities for your projects. Happy tinkering and have fun exploring the world of voltage sensing!
+[Arduino](https://www.arduino.cc/), [Matplotlib](https://matplotlib.org/) and the [ADS1X15 library](https://github.com/RobTillaart/ADS1X15).
